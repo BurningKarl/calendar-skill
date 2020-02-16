@@ -42,7 +42,6 @@ class Calendar(MycroftSkill):
 
             self.user = self.settings.get("username")
             self.server_address = self.settings.get("server_address")
-            self.port = self.settings.get("port")
             self.password = self.settings.get("password")
             if self.user is None or self.user == "":
                 # Using pw in config
@@ -53,7 +52,6 @@ class Calendar(MycroftSkill):
                     config = yaml.safe_load(config)
                     self.user = config.get("username")
                     self.server_address = config.get("server_address")
-                    self.port = config.get("port")
                     self.password = config.get("password")
                 else:
                     self.no_creds = True
@@ -162,9 +160,8 @@ class Calendar(MycroftSkill):
             # add date
             cal.vevent.add('dtstart').value = date
             # add it to the calendar
-            url = "http://{}:{}@{}:{}/".format(self.user, self.password, self.server_address, self.port)
             try:
-                client = caldav.DAVClient(url)
+                client = caldav.DAVClient(self.server_address, username=self.user, password=self.password)
                 principal = client.principal()
 
                 # Select calendar
@@ -226,10 +223,8 @@ class Calendar(MycroftSkill):
                 return []
 
         elif self.server is True:
-            url = "http://{}:{}@{}:{}/".format(self.user, self.password, self.server_address, self.port)
-
             try:
-                client = caldav.DAVClient(url)
+                client = caldav.DAVClient(self.server_address, username=self.user, password=self.password)
                 principal = client.principal()
 
                 # Select calendar

@@ -21,11 +21,7 @@ skillMetadata:
           type: password
           label: Password
           value: ""
-        - name: port
-          type: number
-          label: Port
-          value: ""
         - name: server_address
           type: text
-          label: URL
+          label: URL (e.g. https://your-caldav-server.com)
           value: ""
