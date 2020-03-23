@@ -27,77 +27,93 @@ from caldav.elements import dav, cdav
 import yaml
 import time
 import abc
-from typing import List
+from typing import List, ClassVar
+from dataclasses import dataclass
 
 
-class CalendarConnector(abc.ABC): # Abstract base class for all calendar connectors
+# TODO: Introduce custom errors
+# e.g. CalendarConnectorError with subclasses WrongLogin, ServerUnreachable, InvalidServerAddress, ...
+
+class CalendarConnector(abc.ABC): 
+    '''Abstract base class for all calendar connectors'''
+    
     @abc.abstractmethod
-    def date_search(start, end):
+    def connect(self):
+        '''Attempts to connect to the service with the given login data'''
+        pass
+
+    @abc.abstractmethod
+    def date_search(self, start: datetime.datetime, end: datetime.datetime) -> List:
+        '''Returns all events that occur during the given date range'''
         pass
         
-    def add_event(name, begin):
+    @abc.abstractmethod
+    def add_event(self, name: str, begin: datetime.datetime):
+        '''Adds an event to the calendar'''
         pass
         
         
 class CalDAVConnector(CalendarConnector):
+    '''Connector for CalDAV calendars on a server'''
+    
     def __init__(self, server_address: str, username: str, password: str, calendar_name: str):
-        client = caldav.DAVClient(url=server_address, username=username, password=password)
-        principal = client.principal()
+        self.client = caldav.DAVClient(url=server_address, username=username, password=password)
+        
+    def connect(self):
+        principal = self.client.principal()
         self.calendar = principal.calendar(name=calendar_name)
     
     def date_search(self, start: datetime.datetime, end: datetetime.datetime) -> List[caldav.objects.Event]:
         return self.calendar.date_search(start, end)
         
-    def add_event(self, name, begin):
+    def add_event(self, name: str, begin: datetime.datetime) -> None:
         # Create a new ics.Event
         # Convert to ICS string
         # Add to calendar
     
     
 class LocalConnector(CalendarConnector):
+    '''Connector for a local .ics file'''
     pass    
 
 
 class CalendarSkill(MycroftSkill):
-    def __init__(self):
-        MycroftSkill.__init__(self)
+    LOCAL_SETTINGS_FILENAME = 'settings.yml'
+ 
+    def merged_settings(self) -> CalendarSkillSettings:
+        settings = dict(self.settings) # Mycroft Settings
+        fs = FileSystemAccess(str(self.skill_id))
+        if fs.exists(LOCAL_SETTINGS_FILENAME):
+            local_settings = yaml.safe_load(self.read_file(LOCAL_SETTINGS_FILENAME))
+            settings.update(local_settings)
+        return settings
 
-    def update_credentials(self):
-        self.server = False  # False for an ics file, true for a caldav server -regardless of where the creds are stored
-        self.no_creds = False
+    def connection(self) -> CalendarConnector:
+        try: 
+            settings = self.merged_settings()
+        except Exception:
+            self.speak_dialog('setup') # TODO: Make more specific
+            return None
+    
+        if settings['server_type'] == 'CalDAV':
+            connector = CalDAVConnector(server_address=settings['caldav.server_address'],
+                                        username=settings['caldav.username'],
+                                        password=settings['caldav.password'],
+                                        calendar_name=settings['caldav.calendar_name'])
+        elif settings['server_type'] == 'local':
+            connector = LocalConnector()
+        else:
+            raise ValueError('Unsupported server type '+repr(settings['server_type']))
+            
+        try:
+            connector.connect()
+        except Exception:
+            self.speak('error.logging.in')
+            
+        return connector
 
-        server_type = self.settings.get("server_type")
-        if server_type == "server":  # On home
-            self.server = True
-
-            self.user = self.settings.get("username")
-            self.server_address = self.settings.get("server_address")
-            self.password = self.settings.get("password")
-            if self.user is None or self.user == "":
-                # Using pw in config
-                fs = FileSystemAccess(str(self.skill_id))
-                if fs.exists("calendar_conf.yml"):
-                    #  Use yml file for config
-                    config = self.read_file("calendar_conf.yml")
-                    config = yaml.safe_load(config)
-                    self.user = config.get("username")
-                    self.server_address = config.get("server_address")
-                    self.password = config.get("password")
-                else:
-                    self.no_creds = True
-                if self.user is None or self.user == "":
-                    self.no_creds = True
-        elif server_type == "local":  # Use file
-            pass
-
-        if self.no_creds is True:
-            # Not set up in file/home
-            self.speak_dialog("setup")
-            return False
-        return True
-
-    def initialize(self):
-        self.update_credentials()
+##    def initialize(self):
+##        self.update_credentials()
 
     @intent_file_handler('DayAppointment.intent')
     def handle_day_appoint(self, message):
