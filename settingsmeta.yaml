@@ -3,16 +3,16 @@ skillMetadata:
     - name: Calendar Location
       fields:
         - type: label
-          label: By default, the calendar skill defaults to saving your calendar on your device. However, if you wish to connect to a iCal server, you can select the setting here then fill out the information below. You can also <a href='http://bit.ly/mycroft-calendar-ics'>learn more about ics files.</a>
+          label: By default, the calendar skill defaults to saving your calendar on your device. However, if you wish to connect to a CalDAV server, you can select the setting here then fill out the information below. You can also <a href='http://bit.ly/mycroft-calendar-ics'>learn more about ics files.</a>
         - name: server_type
           type: select
           label: Calendar Location
           value: "local"
-          options: Locally on the device|local;iCal Server|server
-    - name: iCal Login
+          options: Locally on the device|local;CalDAV server|CalDAV
+    - name: CalDAV Login
       fields:
         - type: label
-          label: <b>If you selected iCal Server</b> above, fill out the form here, to connect Mycroft to your iCal account. If you wish not to enter this information in here, you can <a href='https://bit.ly/mycroft-calendar-local'>configure the skill on your device</a>
+          label: <b>If you selected CalDAV Server</b> above, fill out the form here, to connect Mycroft to your CalDAV account. If you wish not to enter this information in here, you can <a href='https://bit.ly/mycroft-calendar-local'>configure the skill on your device</a>
         - name: username
           type: text
           label: Username
@@ -23,5 +23,5 @@ skillMetadata:
           value: ""
         - name: server_address
           type: text
-          label: URL (e.g. https://your-caldav-server.com)
+          label: CalDAV server address (e.g. https://your-caldav-server.com)
           value: ""
