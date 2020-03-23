@@ -13,15 +13,19 @@ skillMetadata:
       fields:
         - type: label
           label: <b>If you selected CalDAV Server</b> above, fill out the form here, to connect Mycroft to your CalDAV account. If you wish not to enter this information in here, you can <a href='https://bit.ly/mycroft-calendar-local'>configure the skill on your device</a>
-        - name: username
+        - name: caldav.username
           type: text
           label: Username
           value: ""
-        - name: password
+        - name: caldav.password
           type: password
           label: Password
           value: ""
-        - name: server_address
+        - name: caldav.server_address
           type: text
-          label: CalDAV server address (e.g. https://your-caldav-server.com)
+          label: CalDAV server address (e.g. https://my-nextcloud.com/remote.php/dav/calendars/my-name/)
+          value: ""
+        - name: caldav.calendar_name
+          type: text
+          label: Calendar name
           value: ""
