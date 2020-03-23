@@ -26,9 +26,39 @@ import arrow
 from caldav.elements import dav, cdav
 import yaml
 import time
+import abc
+from typing import List
 
 
-class Calendar(MycroftSkill):
+class CalendarConnector(abc.ABC): # Abstract base class for all calendar connectors
+    @abc.abstractmethod
+    def date_search(start, end):
+        pass
+        
+    def add_event(name, begin):
+        pass
+        
+        
+class CalDAVConnector(CalendarConnector):
+    def __init__(self, server_address: str, username: str, password: str, calendar_name: str):
+        client = caldav.DAVClient(url=server_address, username=username, password=password)
+        principal = client.principal()
+        self.calendar = principal.calendar(name=calendar_name)
+    
+    def date_search(self, start: datetime.datetime, end: datetetime.datetime) -> List[caldav.objects.Event]:
+        return self.calendar.date_search(start, end)
+        
+    def add_event(self, name, begin):
+        # Create a new ics.Event
+        # Convert to ICS string
+        # Add to calendar
+    
+    
+class LocalConnector(CalendarConnector):
+    pass    
+
+
+class CalendarSkill(MycroftSkill):
     def __init__(self):
         MycroftSkill.__init__(self)
 
