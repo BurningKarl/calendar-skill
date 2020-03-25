@@ -88,7 +88,7 @@ class CalendarSkill(MycroftSkill):
             settings.update(local_settings)
         return settings
 
-    def connection(self) -> CalendarConnector:
+    def open_connection(self) -> CalendarConnector:
         try: 
             settings = self.merged_settings()
         except Exception:
@@ -107,24 +107,50 @@ class CalendarSkill(MycroftSkill):
             
         try:
             connector.connect()
-        except Exception:
-            self.speak('error.logging.in')
+        except Exception: 
+            self.speak('error.logging.in') # TODO: Make more specific
             
         return connector
 
 ##    def initialize(self):
 ##        self.update_credentials()
 
+    # This function makes use of the extracte_datetime utility function which
+    # is part of lingua_franca. This function does not support date ranges 
+    # (yet), so we have to guess the range that was meant
+    # 0. The speaker does not mention a datetime -> the current day
+    # 1. datetime is at midnight -> the whole day
+    # 2. datetime is not at midnight
+    # 2.0. The speaker mentions none of the above -> the whole day
+    # 2.1. The speaker mentions "after" -> same day until midnight
+    # 2.2. The speaker mentions "before" -> same day from midnight
+    def date_range_from_message(self, message):
+        utterance = message.data['utterance']
+        now = datetime.datetime.now()
+        midnight = datetime.time() 
+        one_day = datetime.timedelta(days=1)
+        
+        date, leftover = extract_datetime(utterance, now, self.lang)
+        if date is None: 
+            date = datetime.datetime.combine(now, midnight)
+        self.log.info('The extracted date is '+str(date))
+            
+        if date.time() == midnight:
+            return date, date + one_day 
+        else:
+            date_midnight = datetime.datetime.combine(date, midnight)
+            if 'after' in leftover:
+                return date, date_midnight + one_day
+            elif 'before' in leftover:
+                return date_midnight, date
+            else:
+                return date_midnight, date_midnight + one_day
+
     @intent_file_handler('DayAppointment.intent')
     def handle_day_appoint(self, message):
-        # clean/get date in utter
-        if self.update_credentials() is False:  # No credentials
-            return
-        utter = message.data["utterance"]
-        when = extract_datetime(utter, datetime.datetime.now(), self.lang)[0]
-        if when is None:
-            when = extract_datetime("today", datetime.datetime.now(), self.lang)
-        self.log.info(str(when))
+        connector = self.open_connection()
+            
+        date_range = date_from_message(message)
         # get events
         events = self.get_events(when)
         nice_when = nice_date(when, now=now_local(), lang=self.lang)
