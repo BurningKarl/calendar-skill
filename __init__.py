@@ -34,6 +34,13 @@ from dataclasses import dataclass
 # TODO: Introduce custom errors
 # e.g. CalendarConnectorError with subclasses WrongLogin, ServerUnreachable, InvalidServerAddress, ...
 
+@dataclass
+class Event:
+    start: datetime
+    end: datetime
+    title: str
+
+
 class CalendarConnector(abc.ABC): 
     '''Abstract base class for all calendar connectors'''
     
@@ -43,7 +50,8 @@ class CalendarConnector(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def date_search(self, start: datetime.datetime, end: datetime.datetime) -> List:
+    def date_search(self, start: datetime.datetime, end: datetime.datetime) 
+                   -> List[Event]:
         '''Returns all events that occur during the given date range'''
         pass
         
@@ -56,14 +64,17 @@ class CalendarConnector(abc.ABC):
 class CalDAVConnector(CalendarConnector):
     '''Connector for CalDAV calendars on a server'''
     
-    def __init__(self, server_address: str, username: str, password: str, calendar_name: str):
+    def __init__(self, server_address: str, username: str, password: str, 
+                 calendar_name: str):
         self.client = caldav.DAVClient(url=server_address, username=username, password=password)
         
     def connect(self):
         principal = self.client.principal()
         self.calendar = principal.calendar(name=calendar_name)
     
-    def date_search(self, start: datetime.datetime, end: datetetime.datetime) -> List[caldav.objects.Event]:
+    def date_search(self, start: datetime.datetime, end: datetetime.datetime)
+                   -> List[Event]:
+        # TODO: Implement this correctly
         return self.calendar.date_search(start, end)
         
     def add_event(self, name: str, begin: datetime.datetime) -> None:
@@ -124,13 +135,16 @@ class CalendarSkill(MycroftSkill):
     # 2.0. The speaker mentions none of the above -> the whole day
     # 2.1. The speaker mentions "after" -> same day until midnight
     # 2.2. The speaker mentions "before" -> same day from midnight
+    #
+    # This leads to 'what events do i have next week' being parsed as a 
+    # request for all events on the day that is one week from today
     def date_range_from_message(self, message):
         utterance = message.data['utterance']
         now = datetime.datetime.now()
         midnight = datetime.time() 
         one_day = datetime.timedelta(days=1)
         
-        date, leftover = extract_datetime(utterance, now, self.lang)
+        date, leftover = extract_datetime(utterance)
         if date is None: 
             date = datetime.datetime.combine(now, midnight)
         self.log.info('The extracted date is '+str(date))
@@ -150,10 +164,15 @@ class CalendarSkill(MycroftSkill):
     def handle_day_appoint(self, message):
         connector = self.open_connection()
             
-        date_range = date_from_message(message)
+        start_dt, end_dt = date_from_message(message)
+        events = self.connector.date_search(start_dt, end_dt)
+        if not events:
+            # TODO: Fix the dialog?
+            # self.speak_dialog('no.events', data={
+        
         # get events
         events = self.get_events(when)
-        nice_when = nice_date(when, now=now_local(), lang=self.lang)
+        nice_when = nice_date(when, now=now_local())
         if events:
             # say first
             self.speak_dialog("day", data={"num_events": len(events), "event": events[0].get("event"),
